@@ -1,0 +1,9 @@
+.gradle/
+build/
+core/build/
+.idea/
+*.iml
+.intellijPlatform/
+.kotlin/
+out/
+local.properties
