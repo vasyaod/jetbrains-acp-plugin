@@ -48,6 +48,8 @@ class AcpClient(
     private val sessions = ConcurrentHashMap<String, SessionState>()
     private val peer = JsonRpcPeer(Handler(), executor)
     @Volatile private var closing = false
+    /** Set once initialize succeeded; before that a failure is thrown by connect(), not reported as a drop. */
+    @Volatile private var ready = false
     @Volatile var agentInfo: AgentInfo? = null
         private set
 
@@ -70,7 +72,7 @@ class AcpClient(
         peer.onClosed = { err ->
             terminals.killAll()
             sessions.clear()
-            if (!closing && err != null) safe { listener.onDisconnected(err) }
+            if (!closing && ready && err != null) safe { listener.onDisconnected(err) }
         }
         val result = await(
             peer.request(
@@ -91,7 +93,10 @@ class AcpClient(
             "initialize",
         ).asObj()
         val info = result.obj("agentInfo")
-        return AgentInfo(info.str("name"), info.str("version"), result.int("protocolVersion"), result).also { agentInfo = it }
+        val agent = AgentInfo(info.str("name"), info.str("version"), result.int("protocolVersion"), result)
+        agentInfo = agent
+        ready = true
+        return agent
     }
 
     /** `session/new` with [cwd] (absolute, on this machine). Every prompt in one chat reuses the returned id. */

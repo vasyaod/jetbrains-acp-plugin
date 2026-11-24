@@ -7,11 +7,11 @@ import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.util.Computable
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -42,10 +42,9 @@ class IdeFileSystem(private val project: Project) : FileSystemHandler {
     override fun readTextFile(path: Path): String {
         val vf = LocalFileSystem.getInstance().findFileByNioFile(path)
         if (vf != null && !vf.isDirectory) {
-            val doc = ReadAction.compute<com.intellij.openapi.editor.Document?, RuntimeException> {
-                FileDocumentManager.getInstance().getCachedDocument(vf)
-            }
-            if (doc != null) return ReadAction.compute<String, RuntimeException> { doc.text }
+            val app = ApplicationManager.getApplication()
+            val text = app.runReadAction(Computable { FileDocumentManager.getInstance().getCachedDocument(vf)?.text })
+            if (text != null) return text
             if (!Files.exists(path)) throw java.nio.file.NoSuchFileException(path.toString())
             return String(Files.readAllBytes(path), vf.charset)
         }

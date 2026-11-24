@@ -138,9 +138,10 @@ You need JDK 21. Gradle comes from the wrapper.
 ./gradlew test          # core tests: mock ACP agent over WebSocket, mock OAuth server
 ./gradlew buildPlugin   # build/distributions/jetbrains-acp-plugin-<version>.zip
 ./gradlew runIde        # a sandbox IDE with the plugin installed
+./gradlew verifyPlugin  # JetBrains Plugin Verifier vs IDEA 2024.2, 2025.2 and 2026.3 (downloads ~3 GB)
 ```
 
-The tests run headless and need no IDE:
+The tests run headless; no IDE window is opened:
 
 - `AcpClientTest` runs a **mock ACP agent over WebSocket** that checks the `Authorization` header,
   then drives a scripted turn: a text chunk, `tool_call`, a permission request, `terminal/create`
@@ -153,6 +154,10 @@ The tests run headless and need no IDE:
 - `OAuthTest` runs a **mock authorization server** (RFC 9728 + RFC 8414 metadata, `/authorize`,
   and `/token` checking the S256 verifier). It covers the full browser flow over the loopback
   redirect, the issuer fallback, a denied authorization, and using the token on the WebSocket.
+- `IdeHandlersTest` (IntelliJ test framework, headless) covers the IDE side: a read returns
+  the unsaved Document text, a write goes through the Document, is saved to disk and can be
+  undone, missing directories are created, and a process started through `GeneralCommandLine`
+  runs in the given directory with the given environment and can be killed.
 - `RealServerSmokeTest` connects to `wss://agent-swarm.f-proj.com/acp` when
   `$AGENT_SWARM_RUN_TOKEN` is set. It expects a clean access error, since run tokens are refused,
   and never prints the token. Without the variable it is skipped (as in CI).

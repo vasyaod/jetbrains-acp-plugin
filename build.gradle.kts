@@ -1,5 +1,6 @@
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
@@ -35,6 +36,9 @@ kotlin {
         // The oldest IDE we support (2024.2) ships Kotlin 2.0's stdlib.
         apiVersion.set(KotlinVersion.KOTLIN_2_0)
         languageVersion.set(KotlinVersion.KOTLIN_2_0)
+        // Use the platform interfaces' own default methods instead of generating bridge
+        // overrides (which the plugin verifier reports as overriding internal/deprecated API).
+        jvmDefault.set(JvmDefaultMode.NO_COMPATIBILITY)
     }
 }
 

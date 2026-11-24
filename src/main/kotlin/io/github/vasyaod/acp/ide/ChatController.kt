@@ -33,26 +33,37 @@ class ChatController(private val project: Project, private val view: ChatView) :
     @Volatile private var sessionId: String? = null
     @Volatile private var turn: CompletableFuture<String>? = null
     @Volatile private var lostSession = false
+    /** Bumped by New chat, so a late answer from the old chat does not print into the new one. */
+    @Volatile private var generation = 0
+    /** The same failure reaches us twice (the turn's future and onDisconnected); show it once. */
+    private var lastShownError: Throwable? = null
 
-    val isBusy: Boolean get() = turn?.isDone == false
+    /** True from Send until the turn ends (including while connecting). */
+    @Volatile private var sending = false
+
+    val isBusy: Boolean get() = sending || turn?.isDone == false
 
     fun send(text: String) {
         if (text.isBlank() || isBusy) return
+        sending = true
         view.addUserMessage(text)
         view.setBusy(true)
+        val gen = generation
         worker.execute {
             try {
                 val (c, sid) = ensureSession()
                 val f = c.prompt(sid, text)
                 turn = f
-                f.whenComplete { reason, err -> edt { finishTurn(reason, err) } }
+                f.whenComplete { reason, err -> edt { finishTurn(gen, reason, err) } }
             } catch (e: Throwable) {
-                edt { finishTurn(null, e) }
+                edt { finishTurn(gen, null, e) }
             }
         }
     }
 
-    private fun finishTurn(reason: String?, err: Throwable?) {
+    private fun finishTurn(gen: Int, reason: String?, err: Throwable?) {
+        if (gen != generation) return
+        sending = false
         view.setBusy(false)
         view.endAgentMessage()
         if (err == null) {
@@ -148,6 +159,8 @@ class ChatController(private val project: Project, private val view: ChatView) :
         sessionId = null
         turn = null
         lostSession = false
+        generation++
+        sending = false
         view.clear()
         view.setBusy(false)
     }
@@ -169,13 +182,14 @@ class ChatController(private val project: Project, private val view: ChatView) :
             sessionId = null
             edt {
                 view.setStatus("Disconnected")
-                // A running turn reports the error itself when its future fails.
-                if (!isBusy) showConnectionError(error)
+                showConnectionError(error)
             }
         }
     }
 
     private fun showConnectionError(e: AcpConnectionException) {
+        if (e === lastShownError) return
+        lastShownError = e
         view.addError(e.message ?: "Connection error")
         when (e.kind) {
             FailureKind.UNAUTHORIZED -> offerSignIn(e.message ?: "")

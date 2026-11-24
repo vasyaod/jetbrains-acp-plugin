@@ -186,11 +186,17 @@ class ChatView(private val project: Project, parent: Disposable) : JPanel(Border
     }
 
     fun applyLocal(event: LocalEvent) {
-        val card = event.toolCallId?.let { cards[it] } ?: ToolCallCard().also {
+        // Attach to the agent's tool-call card; without one, group by terminal.
+        val key = event.toolCallId?.takeIf { cards.containsKey(it) } ?: when (event) {
+            is LocalEvent.CommandStarted -> "term:${event.terminalId}"
+            is LocalEvent.CommandOutput -> "term:${event.terminalId}"
+            is LocalEvent.CommandExited -> "term:${event.terminalId}"
+            else -> "local:${System.nanoTime()}"
+        }
+        val card = cards[key] ?: ToolCallCard().also {
             endAgentMessage()
-            val key = "local-" + System.nanoTime()
             cards[key] = it
-            it.update("local", "other", "in_progress", null)
+            it.update(if (event is LocalEvent.CommandStarted) event.commandLine else "local", if (key.startsWith("term:")) "execute" else "other", null, null)
             add(it)
         }
         when (event) {
