@@ -1,3 +1,5 @@
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
@@ -42,7 +44,12 @@ dependencies {
 
     intellijPlatform {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
+        // Headless IDE tests of the IntelliJ layer (documents, undo, processes).
+        testFramework(TestFrameworkType.Platform)
     }
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.opentest4j:opentest4j:1.3.0")
 }
 
 intellijPlatform {
@@ -59,13 +66,16 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            recommended()
+            // The oldest supported line, the compile target, and the newest release.
+            create(IntelliJPlatformType.IntellijIdeaCommunity, "2024.2.6")
+            create(IntelliJPlatformType.IntellijIdeaCommunity, providers.gradleProperty("platformVersion").get())
+            create(IntelliJPlatformType.IntellijIdea, "2026.3")
         }
     }
 }
 
 tasks {
-    // All tests live in :core (plain JUnit, no IDE needed); make `./gradlew test` run them.
+    // `./gradlew test` runs the plain-JUnit core tests and the headless IDE tests.
     test {
         dependsOn(":core:test")
     }

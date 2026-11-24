@@ -1,0 +1,29 @@
+<idea-plugin>
+    <id>io.github.vasyaod.acp-client</id>
+    <name>ACP Agent Client</name>
+    <vendor url="https://github.com/vasyaod/jetbrains-acp-plugin">vasyaod</vendor>
+
+    <description><![CDATA[
+    A generic <a href="https://agentclientprotocol.com">Agent Client Protocol</a> (ACP) client for a
+    <b>remote</b> ACP agent reachable over a WebSocket.
+    <ul>
+      <li>Chat with the agent in the <b>ACP Agent</b> tool window: streamed replies, tool-call cards, Stop and New chat.</li>
+      <li>Every command and file operation the agent requests runs <b>locally</b>, in the open project:
+          commands are local processes in the project root, file reads see unsaved editors, writes are undoable.</li>
+      <li>Allow / Always allow / Reject prompts for commands and edits.</li>
+      <li>Bearer token (kept in the IDE password safe) or OAuth 2.0 sign-in with the browser (PKCE).</li>
+    </ul>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="ACP Agent" anchor="right" secondary="false"
+                    icon="AllIcons.Toolwindows.ToolWindowMessages"
+                    factoryClass="io.github.vasyaod.acp.ide.AcpToolWindowFactory"/>
+        <applicationConfigurable parentId="tools" id="io.github.vasyaod.acp.settings"
+                                 displayName="ACP Agent"
+                                 instance="io.github.vasyaod.acp.ide.AcpConfigurable"/>
+        <notificationGroup id="ACP Agent" displayType="BALLOON"/>
+    </extensions>
+</idea-plugin>
